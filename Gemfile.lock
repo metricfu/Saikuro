@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    Saikuro (1.1.1)
+    Saikuro (1.2.1)
 
 GEM
   remote: http://rubygems.org/

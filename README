@@ -36,7 +36,7 @@ Saikuro is a command line program.
 Running "saikuro -h" will output a usage statement describing all
 the various arguments you can pass to it.
 
-"saikuro -c -p tests/samples.rb"
+"saikuro -c -p examples/samples.rb"
 
 The above command is a simple example that generates a cyclomatic
 complexity report on the samples.rb file, using the default filter,
@@ -45,9 +45,9 @@ directory.
 
 
 A more detailed example is
-"saikuro -c -t -i tests -y 0 -w 11 -e 16 -o out/"
+"saikuro -c -t -i examples -y 0 -w 11 -e 16 -o out/"
 
-This will analyze all Ruby files found in the "tests/" directory.
+This will analyze all Ruby files found in the "examples/" directory.
 Saikuro will generate a token count report and a cyclomatic complexity
 report in the "out" directory .  The "-y 0" command will turn off
 filtering and thus show the complexity of all methods.  The "-w 11"
@@ -126,10 +126,10 @@ Mainly, because we have not gotten around to it.  We are wondering if
 this would increase the noise more than it should.
 
 
-Tests:
+Examples:
 In the test directory is a sample file that has examples of the
 various possible cases that we examined and documented the expected
-cyclomatic complexity result.  If you find mistakes or missing tests
+cyclomatic complexity result.  If you find mistakes or missing examples
 please report them.
 
 Contact:

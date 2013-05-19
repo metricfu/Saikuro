@@ -1,93 +1,44 @@
-# $Id$
-# == Usage
-#
-# saikuro [ -h ] [-o output_directory] [-f type] [ -c, -t ]
-# [ -y, -w, -e, -k, -s, -d - number ] ( -p file | -i directory )
-#
-# == Help
-#
-# -o, --output_directory (directory) : A directory to ouput the results in.
-# The current directory is used if this option is not passed.
-#
-# -h, --help : This help message.
-#
-# -f, --formater (html | text) : The format to output the results in.
-# The default is html
-#
-# -c, --cyclo : Compute the cyclomatic complexity of the input.
-#
-# -t, --token : Count the number of tokens per line of the input.
-#
-# -y, --filter_cyclo (number) : Filter the output to only include methods
-# whose cyclomatic complexity are greater than the passed number.
-#
-# -w, --warn_cyclo (number) : Highlight with a warning methods whose
-# cyclomatic complexity are greather than or equal to the passed number.
-#
-#
-# -e, --error_cyclo (number) : Highligh with an error methods whose
-# cyclomatic complexity are greather than or equal to the passed number.
-#
-#
-# -k, --filter_token (number) : Filter the output to only include lines
-# whose token count are greater than the passed number.
-#
-#
-# -s, --warn_token (number) : Highlight with a warning lines whose
-# token count are greater than or equal to the passed number.
-#
-#
-# -d, --error_token (number) : Highlight with an error lines whose
-# token count are greater than or equal to the passed number.
-#
-#
-# -p, --parse_file (file) : A file to use as input.
-#
-# -i, --input_directory (directory) : All ruby files found recursively
-# inside the directory are passed as input.
+require "saikuro/version"
 
+require "saikuro/html_style_sheet"
 
-# Saikruo uses the BSD license.
-#
-# Copyright (c) 2005, Ubiquitous Business Technology (http://ubit.com)
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are
-# met:
-#
-#
-#    * Redistributions of source code must retain the above copyright
-#      notice, this list of conditions and the following disclaimer.
-#
-#    * Redistributions in binary form must reproduce the above
-#      copyright notice, this list of conditions and the following
-#      disclaimer in the documentation and/or other materials provided
-#      with the distribution.
-#
-#    * Neither the name of Ubiquitous Business Technology nor the names
-#      of its contributors may be used to endorse or promote products
-#      derived from this software without specific prior written
-#      permission.
-#
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-# == Author
-# Zev Blut (zb@ubit.com)
+require "saikuro/result_index_generator"
+
+require "saikuro/base_formater"
+require "saikuro/token_counter_formater"
+require "saikuro/parse_state_formater"
+require "saikuro/html_token_counter_formater"
+require "saikuro/state_html_complexity_formater"
+
+require "saikuro/cli"
 
 require 'irb/ruby-lex'
 require 'yaml'
+
+module Saikuro
+end
+
+#Returns the path without the file
+def seperate_file_from_path(path)
+  res = path.split("/")
+  if res.size == 1
+    ""
+  else
+    res[0..res.size - 2].join("/")
+  end
+end
+
+def get_ruby_files(path)
+  files = Array.new
+  Find.find(path) do |f|
+    if !FileTest.directory?(f)
+      if f =~ /rb$/
+        files<< f
+      end
+    end
+  end
+  files
+end
 
 # States to watch for
 # once in def get the token after space, because it may also
@@ -119,7 +70,7 @@ class TokenCounter
     @files.each do |fname, tok_per_line|
       formater.start_file(fname)
       tok_per_line.sort.each do |line,num|
-	formater.line_token_count(line,num)
+	    formater.line_token_count(line,num)
       end
       formater.end_file
     end
@@ -248,7 +199,7 @@ class ParseState
       end
       @last_token_line_and_char<< [@lexer.line_no.to_i, @lexer.char_no.to_i, tok]
       if $VERBOSE
-	puts "DEBUG: #{@lexer.line_no} #{tok.class}:#{tok.name if tok.respond_to?(:name)}"
+        puts "DEBUG: #{@lexer.line_no} #{tok.class}:#{tok.name if tok.respond_to?(:name)}"
       end
       @@token_counter.count_token(@lexer.line_no, tok) if count_tokens?
       parse_token(tok)
@@ -526,9 +477,9 @@ class ParseDef < EndableParseState
     when TkSPACE
       # mark first space so we can stop at next space
       if @first_space
-	@first_space = false
+        @first_space = false
       else
-	@looking_for_name = false
+        @looking_for_name = false
       end
     when TkNL,TkLPAREN,TkfLPAREN,TkSEMICOLON
       # we can also stop at a new line or left parenthesis
@@ -545,14 +496,14 @@ class ParseDef < EndableParseState
       @name<< "]"
     else
       begin
-	@name<< token.name.to_s
-      rescue Exception => err
-	#what is this?
-	STDOUT.puts @@token_counter.current_file
-	STDOUT.puts @name
-	STDOUT.puts token.inspect
-	STDOUT.puts err.message
-	exit 1
+        @name<< token.name.to_s
+          rescue Exception => err
+        #what is this?
+        STDOUT.puts @@token_counter.current_file
+        STDOUT.puts @name
+        STDOUT.puts token.inspect
+        STDOUT.puts err.message
+        exit 1
       end
     end
   end
@@ -661,373 +612,7 @@ class Filter
 
 end
 
-
-class BaseFormater
-  attr_accessor :warnings, :errors, :current
-
-  def initialize(out, filter = nil)
-    @out = out
-    @filter = filter
-    reset_data
-  end
-
-  def warn_error?(num, marker)
-    klass = ""
-
-    if @filter.error?(num)
-      klass = ' class="error"'
-      @errors<< [@current, marker, num]
-    elsif @filter.warn?(num)
-      klass = ' class="warning"'
-      @warnings<< [@current, marker, num]
-    end
-
-    klass
-  end
-
-  def reset_data
-    @warnings = Array.new
-    @errors = Array.new
-    @current = ""
-  end
-
-end
-
-class TokenCounterFormater < BaseFormater
-
-  def start(new_out=nil)
-    reset_data
-    @out = new_out if new_out
-    @out.puts "Token Count"
-  end
-
-  def start_count(number_of_files)
-    @out.puts "Counting tokens for #{number_of_files} files."
-  end
-
-  def start_file(file_name)
-    @current = file_name
-    @out.puts "File:#{file_name}"
-  end
-
-  def line_token_count(line_number,number_of_tokens)
-    return if @filter.ignore?(number_of_tokens)
-    warn_error?(number_of_tokens, line_number)
-    @out.puts "Line:#{line_number} ; Tokens : #{number_of_tokens}"
-  end
-
-  def end_file
-    @out.puts ""
-  end
-
-  def end_count
-  end
-
-  def end
-  end
-
-end
-
-module HTMLStyleSheet
-  def HTMLStyleSheet.style_sheet
-    out = StringIO.new
-
-    out.puts "<style>"
-    out.puts 'body {'
-    out.puts '	margin: 20px;'
-    out.puts '	padding: 0;'
-    out.puts '	font-size: 12px;'
-    out.puts '	font-family: bitstream vera sans, verdana, arial, sans serif;'
-    out.puts '	background-color: #efefef;'
-    out.puts '}'
-    out.puts ''
-    out.puts 'table {	'
-    out.puts '	border-collapse: collapse;'
-    out.puts '	/*border-spacing: 0;*/'
-    out.puts '	border: 1px solid #666;'
-    out.puts '	background-color: #fff;'
-    out.puts '	margin-bottom: 20px;'
-    out.puts '}'
-    out.puts ''
-    out.puts 'table, th, th+th, td, td+td  {'
-    out.puts '	border: 1px solid #ccc;'
-    out.puts '}'
-    out.puts ''
-    out.puts 'table th {'
-    out.puts '	font-size: 12px;'
-    out.puts '	color: #fc0;'
-    out.puts '	padding: 4px 0;'
-    out.puts '	background-color: #336;'
-    out.puts '}'
-    out.puts ''
-    out.puts 'th, td {'
-    out.puts '	padding: 4px 10px;'
-    out.puts '}'
-    out.puts ''
-    out.puts 'td {	'
-    out.puts '	font-size: 13px;'
-    out.puts '}'
-    out.puts ''
-    out.puts '.class_name {'
-    out.puts '	font-size: 17px;'
-    out.puts '	margin: 20px 0 0;'
-    out.puts '}'
-    out.puts ''
-    out.puts '.class_complexity {'
-    out.puts 'margin: 0 auto;'
-    out.puts '}'
-    out.puts ''
-    out.puts '.class_complexity>.class_complexity {'
-    out.puts '	margin: 0;'
-    out.puts '}'
-    out.puts ''
-    out.puts '.class_total_complexity, .class_total_lines, .start_token_count, .file_count {'
-    out.puts '	font-size: 13px;'
-    out.puts '	font-weight: bold;'
-    out.puts '}'
-    out.puts ''
-    out.puts '.class_total_complexity, .class_total_lines {'
-    out.puts '	color: #c00;'
-    out.puts '}'
-    out.puts ''
-    out.puts '.start_token_count, .file_count {'
-    out.puts '	color: #333;'
-    out.puts '}'
-    out.puts ''
-    out.puts '.warning {'
-    out.puts '	background-color: yellow;'
-    out.puts '}'
-    out.puts ''
-    out.puts '.error {'
-    out.puts '	background-color: #f00;'
-    out.puts '}'
-    out.puts "</style>"
-
-    out.string
-  end
-
-  def style_sheet
-    HTMLStyleSheet.style_sheet
-  end
-end
-
-
-class HTMLTokenCounterFormater < TokenCounterFormater
-  include HTMLStyleSheet
-
-  def start(new_out=nil)
-    reset_data
-    @out = new_out if new_out
-    @out.puts "<html>"
-    @out.puts style_sheet
-    @out.puts "<body>"
-  end
-
-  def start_count(number_of_files)
-    @out.puts "<div class=\"start_token_count\">"
-    @out.puts "Number of files: #{number_of_files}"
-    @out.puts "</div>"
-  end
-
-  def start_file(file_name)
-    @current = file_name
-    @out.puts "<div class=\"file_count\">"
-    @out.puts "<p class=\"file_name\">"
-    @out.puts "File: #{file_name}"
-    @out.puts "</p>"
-    @out.puts "<table width=\"100%\" border=\"1\">"
-    @out.puts "<tr><th>Line</th><th>Tokens</th></tr>"
-  end
-
-  def line_token_count(line_number,number_of_tokens)
-    return if @filter.ignore?(number_of_tokens)
-    klass = warn_error?(number_of_tokens, line_number)
-    @out.puts "<tr><td>#{line_number}</td><td#{klass}>#{number_of_tokens}</td></tr>"
-  end
-
-  def end_file
-    @out.puts "</table>"
-  end
-
-  def end_count
-  end
-
-  def end
-    @out.puts "</body>"
-    @out.puts "</html>"
-  end
-end
-
-class ParseStateFormater < BaseFormater
-
-  def start(new_out=nil)
-    reset_data
-    @out = new_out if new_out
-  end
-
-  def end
-  end
-
-  def start_class_compute_state(type_name,name,complexity,lines)
-    @current = name
-    @out.puts "-- START #{name} --"
-    @out.puts "Type:#{type_name} Name:#{name} Complexity:#{complexity} Lines:#{lines}"
-  end
-
-  def end_class_compute_state(name)
-    @out.puts "-- END #{name} --"
-  end
-
-  def def_compute_state(name,complexity,lines)
-    return if @filter.ignore?(complexity)
-    warn_error?(complexity, name)
-    @out.puts "Type:Def Name:#{name} Complexity:#{complexity} Lines:#{lines}"
-  end
-
-end
-
-
-
-class StateHTMLComplexityFormater < ParseStateFormater
-  include HTMLStyleSheet
-
-  def start(new_out=nil)
-    reset_data
-    @out = new_out if new_out
-    @out.puts "<html><head><title>Cyclometric Complexity</title></head>"
-    @out.puts style_sheet
-    @out.puts "<body>"
-  end
-
-  def end
-    @out.puts "</body>"
-    @out.puts "</html>"
-  end
-
-  def start_class_compute_state(type_name,name,complexity,lines)
-    @current = name
-    @out.puts "<div class=\"class_complexity\">"
-    @out.puts "<h2 class=\"class_name\">#{type_name} : #{name}</h2>"
-    @out.puts "<div class=\"class_total_complexity\">Total Complexity: #{complexity}</div>"
-    @out.puts "<div class=\"class_total_lines\">Total Lines: #{lines}</div>"
-    @out.puts "<table width=\"100%\" border=\"1\">"
-    @out.puts "<tr><th>Method</th><th>Complexity</th><th># Lines</th></tr>"
-  end
-
-  def end_class_compute_state(name)
-    @out.puts "</table>"
-    @out.puts "</div>"
-  end
-
-  def def_compute_state(name, complexity, lines)
-    return if @filter.ignore?(complexity)
-    klass = warn_error?(complexity, name)
-    @out.puts "<tr><td>#{name}</td><td#{klass}>#{complexity}</td><td>#{lines}</td></tr>"
-  end
-
-end
-
-
-module ResultIndexGenerator
-  def summarize_errors_and_warnings(enw, header)
-    return "" if enw.empty?
-    f = StringIO.new
-    erval = Hash.new { |h,k| h[k] = Array.new }
-    wval = Hash.new { |h,k| h[k] = Array.new }
-
-    enw.each do |fname, warnings, errors|
-      errors.each do |c,m,v|
-        erval[v] << [fname, c, m]
-      end
-      warnings.each do |c,m,v|
-        wval[v] << [fname, c, m]
-      end
-    end
-
-    f.puts "<h2 class=\"class_name\">Errors and Warnings</h2>"
-    f.puts "<table width=\"100%\" border=\"1\">"
-    f.puts header
-
-    f.puts print_summary_table_rows(erval, "error")
-    f.puts print_summary_table_rows(wval, "warning")
-    f.puts "</table>"
-
-    f.string
-  end
-
-  def print_summary_table_rows(ewvals, klass_type)
-    f = StringIO.new
-    ewvals.sort { |a,b| b <=> a}.each do |v, vals|
-      vals.sort.each do |fname, c, m|
-        f.puts "<tr><td><a href=\"./#{fname}\">#{c}</a></td><td>#{m}</td>"
-        f.puts "<td class=\"#{klass_type}\">#{v}</td></tr>"
-      end
-    end
-    f.string
-  end
-
-  def list_analyzed_files(files)
-    f = StringIO.new
-    f.puts "<h2 class=\"class_name\">Analyzed Files</h2>"
-    f.puts "<ul>"
-    files.each do |fname, warnings, errors|
-      readname = fname.split("_")[0...-1].join("_")
-      f.puts "<li>"
-      f.puts "<p class=\"file_name\"><a href=\"./#{fname}\">#{readname}</a>"
-      f.puts "</li>"
-    end
-    f.puts "</ul>"
-    f.string
-  end
-
-  def write_index(files, filename, title, header)
-    return if files.empty?
-
-    File.open(filename,"w") do |f|
-      f.puts "<html><head><title>#{title}</title></head>"
-      f.puts "#{HTMLStyleSheet.style_sheet}\n<body>"
-      f.puts "<h1>#{title}</h1>"
-
-      enw = files.find_all { |fn,w,e| (!w.empty? || !e.empty?) }
-
-      f.puts summarize_errors_and_warnings(enw, header)
-
-      f.puts "<hr/>"
-      f.puts list_analyzed_files(files)
-      f.puts "</body></html>"
-    end
-  end
-
-  def write_cyclo_index(files, output_dir)
-    header = "<tr><th>Class</th><th>Method</th><th>Complexity</th></tr>"
-    write_index(files,
-                "#{output_dir}/index_cyclo.html",
-                "Index for cyclomatic complexity",
-                header)
-  end
-
-  def write_token_index(files, output_dir)
-    header = "<tr><th>File</th><th>Line #</th><th>Tokens</th></tr>"
-    write_index(files,
-                "#{output_dir}/index_token.html",
-                "Index for tokens per line",
-                header)
-  end
-
-end
-
 module Saikuro
-
-  #Returns the path without the file
-  def Saikuro.seperate_file_from_path(path)
-    res = path.split("/")
-    if res.size == 1
-      ""
-    else
-      res[0..res.size - 2].join("/")
-    end
-  end
-
   def Saikuro.analyze(files, state_formater, token_count_formater, output_dir)
 
     idx_states = Array.new
@@ -1108,118 +693,4 @@ module Saikuro
 
     [idx_states, idx_tokens]
   end
-end
-
-
-# Really ugly command line runner stuff here for now
-
-class SaikuroCMDLineRunner
-  require 'stringio'
-  require 'getoptlong'
-  require 'fileutils'
-  require 'find'
-
-  # modification to RDoc.usage that allows main_program_file to be set
-  # for RDoc.usage
-  require 'saikuro/usage'
-  RDoc::main_program_file = __FILE__
-
-  include ResultIndexGenerator
-
-  def get_ruby_files(path)
-    files = Array.new
-    Find.find(path) do |f|
-      if !FileTest.directory?(f)
-	if f =~ /rb$/
-	  files<< f
-	end
-      end
-    end
-    files
-  end
-
-  def run
-    files = Array.new
-    output_dir = "./"
-    formater = "html"
-    state_filter = Filter.new(5)
-    token_filter = Filter.new(10, 25, 50)
-    comp_state = comp_token = false
-    begin
-      opt = GetoptLong.new(
-                           ["-o","--output_directory", GetoptLong::REQUIRED_ARGUMENT],
-                           ["-h","--help", GetoptLong::NO_ARGUMENT],
-                           ["-f","--formater", GetoptLong::REQUIRED_ARGUMENT],
-                           ["-c","--cyclo", GetoptLong::NO_ARGUMENT],
-                           ["-t","--token", GetoptLong::NO_ARGUMENT],
-                           ["-y","--filter_cyclo", GetoptLong::REQUIRED_ARGUMENT],
-                           ["-k","--filter_token", GetoptLong::REQUIRED_ARGUMENT],
-                           ["-w","--warn_cyclo", GetoptLong::REQUIRED_ARGUMENT],
-                           ["-s","--warn_token", GetoptLong::REQUIRED_ARGUMENT],
-                           ["-e","--error_cyclo", GetoptLong::REQUIRED_ARGUMENT],
-                           ["-d","--error_token", GetoptLong::REQUIRED_ARGUMENT],
-                           ["-p","--parse_file", GetoptLong::REQUIRED_ARGUMENT],
-                           ["-i","--input_directory", GetoptLong::REQUIRED_ARGUMENT],
-                           ["-v","--verbose", GetoptLong::NO_ARGUMENT]
-                           )
-
-      opt.each do |arg,val|
-        case arg
-        when "-o"
-          output_dir = val
-        when "-h"
-          RDoc.usage('help')
-        when "-f"
-          formater = val
-        when "-c"
-          comp_state = true
-        when "-t"
-          comp_token = true
-        when "-k"
-          token_filter.limit = val.to_i
-        when "-s"
-          token_filter.warn = val.to_i
-        when "-d"
-          token_filter.error = val.to_i
-        when "-y"
-          state_filter.limit = val.to_i
-        when "-w"
-          state_filter.warn = val.to_i
-        when "-e"
-          state_filter.error = val.to_i
-        when "-p"
-          files<< val
-        when "-i"
-          files.concat(get_ruby_files(val))
-        when "-v"
-          STDOUT.puts "Verbose mode on"
-          $VERBOSE = true
-        end
-
-      end
-      RDoc.usage if !comp_state && !comp_token
-    rescue => err
-      RDoc.usage
-    end
-
-    if formater =~ /html/i
-      state_formater = StateHTMLComplexityFormater.new(STDOUT,state_filter)
-      token_count_formater = HTMLTokenCounterFormater.new(STDOUT,token_filter)
-    else
-      state_formater = ParseStateFormater.new(STDOUT,state_filter)
-      token_count_formater = TokenCounterFormater.new(STDOUT,token_filter)
-    end
-
-    state_formater = nil if !comp_state
-    token_count_formater = nil if !comp_token
-
-    idx_states, idx_tokens = Saikuro.analyze(files,
-                                             state_formater,
-                                             token_count_formater,
-                                             output_dir)
-
-    write_cyclo_index(idx_states, output_dir)
-    write_token_index(idx_tokens, output_dir)
-  end
-
 end

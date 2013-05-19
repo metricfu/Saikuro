@@ -26,8 +26,8 @@ class ExtraTests
     end
     if s
       c = s + a
-    end    
-    # large token count 
+    end
+    # large token count
     a + b + c + q + r + s + a + b + c + q + r + s + a + b + c + q + r + s + a + b + c + q + r + s
   end
 
@@ -60,11 +60,11 @@ class ExtraTests
     end
     if r
       s = a + r
-    end    
+    end
     a + b + c + q + r + s + a + b + c + q + r + s
   rescue => err
     puts err
   end
-    
+
 
 end
