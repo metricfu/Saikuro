@@ -79,7 +79,7 @@ class ParseState
     return if global_def.empty?
     gx = global_def.inject(0) { |c,s| s.calc_complexity }
     gl = global_def.inject(0) { |c,s| s.calc_lines }
-    formater.start_class_compute_state("Global", "", gx, gl)
+    formater.start_class_compute_state("Global", "", gx, 0, gl)
     global_def.each do |s|
       s.compute_state(formater)
     end

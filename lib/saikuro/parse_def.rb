@@ -2,6 +2,7 @@ class ParseDef < EndableParseState
 
   def initialize(lexer,parent=nil)
     super(lexer,parent)
+    @first_line = lexer.line_no
     @complexity = 1
     @looking_for_name = true
     @first_space = true
@@ -53,7 +54,7 @@ class ParseDef < EndableParseState
   end
 
   def compute_state(formater)
-    formater.def_compute_state(@name, self.calc_complexity, self.calc_lines)
+    formater.def_compute_state(@name, self.calc_complexity, @first_line, self.calc_lines)
     super(formater)
   end
 end

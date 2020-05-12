@@ -8,20 +8,20 @@ class ParseStateFormater < BaseFormater
   def end
   end
 
-  def start_class_compute_state(type_name,name,complexity,lines)
+  def start_class_compute_state(type_name,name,complexity,first_line,lines)
     @current = name
     @out.puts "-- START #{name} --"
-    @out.puts "Type:#{type_name} Name:#{name} Complexity:#{complexity} Lines:#{lines}"
+    @out.puts "Type:#{type_name} Name:#{name} Complexity:#{complexity} FirstLine:#{first_line} Lines:#{lines}"
   end
 
   def end_class_compute_state(name)
     @out.puts "-- END #{name} --"
   end
 
-  def def_compute_state(name,complexity,lines)
+  def def_compute_state(name,complexity,first_line,lines)
     return if @filter.ignore?(complexity)
     warn_error?(complexity, name)
-    @out.puts "Type:Def Name:#{name} Complexity:#{complexity} Lines:#{lines}"
+    @out.puts "Type:Def Name:#{name} Complexity:#{complexity} FirstLine:#{first_line} Lines:#{lines}"
   end
 
 end

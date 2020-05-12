@@ -1,6 +1,7 @@
 class ParseClass < EndableParseState
   def initialize(lexer,parent=nil)
     super(lexer,parent)
+    @first_line = lexer.line_no
     @type_name = "Class"
   end
 
@@ -15,7 +16,7 @@ class ParseClass < EndableParseState
       child.kind_of?(ParseClass)
     end
 
-    formater.start_class_compute_state(@type_name,@name,self.calc_complexity,self.calc_lines)
+    formater.start_class_compute_state(@type_name,@name,self.calc_complexity,@first_line,self.calc_lines)
     super(formater)
     formater.end_class_compute_state(@name)
 
